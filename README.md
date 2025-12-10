@@ -2,9 +2,9 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/mcp-clickhouse-like)](https://pypi.org/project/mcp-clickhouse-like)
 
-An MCP server for ClickHouse.
+An MCP server for ClickHouse with enhanced filtering capabilities.
 
-<a href="https://glama.ai/mcp/servers/yvjy4csvo1"><img width="380" height="200" src="https://glama.ai/mcp/servers/yvjy4csvo1/badge" alt="mcp-clickhouse MCP server" /></a>
+> **Note**: This is a fork of [ClickHouse/mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse) with added filtering support for `list_databases` and `list_tables` tools.
 
 ## Features
 
