@@ -1,5 +1,5 @@
 [project]
-name = "mcp-clickhouse"
+name = "mcp-clickhouse-like"
 version = "0.1.12"
 description = "An MCP server for ClickHouse."
 readme = "README.md"
@@ -19,7 +19,7 @@ dependencies = [
 mcp-clickhouse = "mcp_clickhouse.main:main"
 
 [project.urls]
-Home = "https://github.com/ClickHouse/mcp-clickhouse"
+Home = "https://github.com/stiproot/mcp-clickhouse"
 
 [project.optional-dependencies]
 dev = [

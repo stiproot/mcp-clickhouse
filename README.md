@@ -1,6 +1,6 @@
 # ClickHouse MCP Server
 
-[![PyPI - Version](https://img.shields.io/pypi/v/mcp-clickhouse)](https://pypi.org/project/mcp-clickhouse)
+[![PyPI - Version](https://img.shields.io/pypi/v/mcp-clickhouse-like)](https://pypi.org/project/mcp-clickhouse-like)
 
 An MCP server for ClickHouse.
 
@@ -70,7 +70,7 @@ This MCP server supports both ClickHouse and chDB. You can enable either or both
       "args": [
         "run",
         "--with",
-        "mcp-clickhouse",
+        "mcp-clickhouse-like",
         "--python",
         "3.10",
         "mcp-clickhouse"
@@ -103,7 +103,7 @@ Or, if you'd like to try it out with the [ClickHouse SQL Playground](https://sql
       "args": [
         "run",
         "--with",
-        "mcp-clickhouse",
+        "mcp-clickhouse-like",
         "--python",
         "3.10",
         "mcp-clickhouse"
@@ -133,7 +133,7 @@ For chDB (embedded ClickHouse engine), add the following configuration:
       "args": [
         "run",
         "--with",
-        "mcp-clickhouse",
+        "mcp-clickhouse-like",
         "--python",
         "3.10",
         "mcp-clickhouse"
@@ -158,7 +158,7 @@ You can also enable both ClickHouse and chDB simultaneously:
       "args": [
         "run",
         "--with",
-        "mcp-clickhouse",
+        "mcp-clickhouse-like",
         "--python",
         "3.10",
         "mcp-clickhouse"
@@ -190,12 +190,12 @@ If you prefer to use the system Python installation instead of uv, you can insta
 
 1. Install the package using pip:
    ```bash
-   python3 -m pip install mcp-clickhouse
+   python3 -m pip install mcp-clickhouse-like
    ```
 
    To upgrade to the latest version:
    ```bash
-   python3 -m pip install --upgrade mcp-clickhouse
+   python3 -m pip install --upgrade mcp-clickhouse-like
    ```
 
 2. Update your Claude Desktop configuration to use Python directly:
@@ -427,7 +427,7 @@ You can set these variables in your environment, in a `.env` file, or in the Cla
       "args": [
         "run",
         "--with",
-        "mcp-clickhouse",
+        "mcp-clickhouse-like",
         "--python",
         "3.10",
         "mcp-clickhouse"
