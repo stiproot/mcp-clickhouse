@@ -1,10 +1,17 @@
-# ClickHouse MCP Server
+# ClickHouse MCP Server (Enhanced)
 
 [![PyPI - Version](https://img.shields.io/pypi/v/mcp-clickhouse-like)](https://pypi.org/project/mcp-clickhouse-like)
 
-An MCP server for ClickHouse with enhanced filtering capabilities.
+An MCP server for ClickHouse with enhanced filtering capabilities for database and table discovery.
 
-> **Note**: This is a fork of [ClickHouse/mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse) with added filtering support for `list_databases` and `list_tables` tools.
+> **Note**: This is a fork of [ClickHouse/mcp-clickhouse](https://github.com/ClickHouse/mcp-clickhouse) with added filtering support for `list_databases` and `list_tables` tools. Both functions now support single or multiple LIKE/NOT LIKE patterns for flexible database and table discovery.
+
+## What's New in This Fork
+
+- ✨ **Multiple Pattern Support**: Filter databases and tables using multiple LIKE patterns with OR logic
+- ✨ **Advanced Exclusions**: Exclude using multiple NOT LIKE patterns with AND logic
+- ✨ **Backward Compatible**: Single string patterns still work exactly as before
+- ✨ **Pagination Aware**: Multiple patterns work seamlessly with table pagination
 
 ## Features
 
@@ -18,16 +25,26 @@ An MCP server for ClickHouse with enhanced filtering capabilities.
 * `list_databases`
   * List databases on your ClickHouse cluster.
   * Optional inputs:
-    * `like` / `not_like` (string): Apply `LIKE` or `NOT LIKE` filters to database names.
+    * `like` (string or list of strings): Apply `LIKE` filter(s) to database names. Multiple patterns are combined with OR logic.
+    * `not_like` (string or list of strings): Apply `NOT LIKE` filter(s) to exclude database names. Multiple patterns are combined with AND logic.
+  * Examples:
+    * `like="prod_%"` - Single pattern
+    * `like=["prod_%", "staging_%"]` - Multiple patterns (matches either)
+    * `not_like=["test_%", "temp_%"]` - Exclude multiple patterns (excludes both)
 
 * `list_tables`
   * List tables in a database with pagination.
   * Required input: `database` (string).
   * Optional inputs:
-    * `like` / `not_like` (string): Apply `LIKE` or `NOT LIKE` filters to table names.
+    * `like` (string or list of strings): Apply `LIKE` filter(s) to table names. Multiple patterns are combined with OR logic.
+    * `not_like` (string or list of strings): Apply `NOT LIKE` filter(s) to exclude table names. Multiple patterns are combined with AND logic.
     * `page_token` (string): Token returned by a previous call for fetching the next page.
     * `page_size` (int, default `50`): Number of tables returned per page.
     * `include_detailed_columns` (bool, default `true`): When `false`, omits column metadata for lighter responses while keeping the full `create_table_query`.
+  * Examples:
+    * `like="user_%"` - Single pattern
+    * `like=["user_%", "order_%"]` - Multiple patterns (matches either)
+    * `not_like=["temp_%", "backup_%"]` - Exclude multiple patterns (excludes both)
   * Response shape:
     * `tables`: Array of table objects for the current page.
     * `next_page_token`: Pass this value back to fetch the next page, or `null` when there are no more tables.
@@ -39,6 +56,47 @@ An MCP server for ClickHouse with enhanced filtering capabilities.
   * Execute SQL queries using [chDB](https://github.com/chdb-io/chdb)'s embedded ClickHouse engine.
   * Input: `sql` (string): The SQL query to execute.
   * Query data directly from various sources (files, URLs, databases) without ETL processes.
+
+### Enhanced Filtering Capabilities
+
+This fork adds powerful filtering capabilities to both `list_databases` and `list_tables` tools, allowing you to efficiently discover and filter databases and tables using SQL LIKE patterns.
+
+#### Key Features
+
+1. **Single Pattern Filtering**
+   - Filter with a single LIKE pattern: `like="prod_%"` matches all databases/tables starting with "prod_"
+   - Exclude with a single NOT LIKE pattern: `not_like="test_%"` excludes all starting with "test_"
+
+2. **Multiple Pattern Filtering**
+   - **OR logic for `like`**: `like=["user_%", "order_%"]` matches tables starting with "user_" OR "order_"
+   - **AND logic for `not_like`**: `not_like=["temp_%", "backup_%"]` excludes tables starting with "temp_" AND tables starting with "backup_"
+
+3. **Combined Filtering**
+   - Mix both: `like=["prod_%", "staging_%"], not_like=["_backup"]` includes prod/staging but excludes any ending with "_backup"
+
+#### Use Cases
+
+**Scenario 1: Multi-environment Database Discovery**
+```python
+# Find all production and staging databases
+list_databases(like=["prod_%", "staging_%"])
+```
+
+**Scenario 2: Clean Table Listing**
+```python
+# List all user and order tables, but exclude temporary and backup tables
+list_tables(
+    database="mydb",
+    like=["user_%", "order_%"],
+    not_like=["temp_%", "backup_%"]
+)
+```
+
+**Scenario 3: Development Environment Cleanup**
+```python
+# Find all test/temp/dev databases for cleanup
+list_databases(like=["test_%", "temp_%", "dev_%"])
+```
 
 ### Health Check Endpoint
 
@@ -460,6 +518,26 @@ uv run pytest -v tests/test_tool.py # ClickHouse only
 uv run pytest -v tests/test_chdb_tool.py # chDB only
 ```
 
-## YouTube Overview
+## Comparison with Upstream
+
+This fork maintains full compatibility with the upstream project while adding enhanced filtering capabilities:
+
+| Feature | Upstream | This Fork |
+|---------|----------|-----------|
+| Single LIKE pattern | ✅ | ✅ |
+| Single NOT LIKE pattern | ✅ | ✅ |
+| Multiple LIKE patterns | ❌ | ✅ (OR logic) |
+| Multiple NOT LIKE patterns | ❌ | ✅ (AND logic) |
+| Pagination support | ✅ | ✅ (with patterns) |
+| Backward compatible | - | ✅ |
+
+### Implementation Details
+
+- **Type Safety**: Uses `Union[str, List[str]]` for pattern parameters
+- **SQL Generation**: Patterns are properly escaped using `format_query_value()` to prevent SQL injection
+- **Pagination**: Multiple patterns are stored in the pagination cache and validated across pages
+- **Performance**: Generates optimized SQL with parenthesized conditions for efficient query execution
+
+## YouTube Overview (Upstream Project)
 
 [![YouTube](http://i.ytimg.com/vi/y9biAm_Fkqw/hqdefault.jpg)](https://www.youtube.com/watch?v=y9biAm_Fkqw)

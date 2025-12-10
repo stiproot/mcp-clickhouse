@@ -85,6 +85,39 @@ class TestClickhouseTools(unittest.TestCase):
         databases = json.loads(result)
         self.assertEqual(len(databases), 0)
 
+    def test_list_databases_with_multiple_like_patterns(self):
+        """Test listing databases with multiple 'LIKE' patterns."""
+        # Create two test databases with different prefixes
+        test_db2 = "other_test_db"
+        self.client.command(f"CREATE DATABASE IF NOT EXISTS {test_db2}")
+
+        try:
+            result = list_databases(like=["test_tool%", "other_test%"])
+            databases = json.loads(result)
+            self.assertIn(self.test_db, databases)
+            self.assertIn(test_db2, databases)
+        finally:
+            self.client.command(f"DROP DATABASE IF EXISTS {test_db2}")
+
+    def test_list_databases_with_multiple_not_like_patterns(self):
+        """Test listing databases with multiple 'NOT LIKE' patterns."""
+        # Create two test databases
+        test_db2 = "test_tool_db2"
+        test_db3 = "test_tool_db3"
+        self.client.command(f"CREATE DATABASE IF NOT EXISTS {test_db2}")
+        self.client.command(f"CREATE DATABASE IF NOT EXISTS {test_db3}")
+
+        try:
+            # Exclude both test_tool_db2 and test_tool_db3
+            result = list_databases(not_like=["%db2", "%db3"])
+            databases = json.loads(result)
+            self.assertIn(self.test_db, databases)
+            self.assertNotIn(test_db2, databases)
+            self.assertNotIn(test_db3, databases)
+        finally:
+            self.client.command(f"DROP DATABASE IF EXISTS {test_db2}")
+            self.client.command(f"DROP DATABASE IF EXISTS {test_db3}")
+
     def test_list_tables_without_like(self):
         """Test listing tables without a 'LIKE' filter."""
         result = list_tables(self.test_db)
@@ -165,6 +198,64 @@ class TestClickhouseTools(unittest.TestCase):
         self.assertEqual(len(result["tables"]), 0)
         self.assertEqual(result["total_tables"], 0)
         self.assertIsNone(result["next_page_token"])
+
+    def test_list_tables_with_multiple_like_patterns(self):
+        """Test listing tables with multiple 'LIKE' patterns."""
+        # Create additional tables
+        table2 = "user_table"
+        table3 = "order_table"
+        self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table2}")
+        self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table3}")
+        self.client.command(f"""
+            CREATE TABLE {self.test_db}.{table2} (id UInt32, name String)
+            ENGINE = MergeTree() ORDER BY id
+        """)
+        self.client.command(f"""
+            CREATE TABLE {self.test_db}.{table3} (id UInt32, amount Float64)
+            ENGINE = MergeTree() ORDER BY id
+        """)
+
+        try:
+            result = list_tables(self.test_db, like=["user_%", "order_%"])
+            self.assertIsInstance(result, dict)
+            self.assertIn("tables", result)
+            tables = result["tables"]
+            table_names = [t["name"] for t in tables]
+            self.assertIn(table2, table_names)
+            self.assertIn(table3, table_names)
+            self.assertNotIn(self.test_table, table_names)  # test_table doesn't match
+        finally:
+            self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table2}")
+            self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table3}")
+
+    def test_list_tables_with_multiple_not_like_patterns(self):
+        """Test listing tables with multiple 'NOT LIKE' patterns."""
+        # Create additional tables
+        table2 = "temp_table"
+        table3 = "backup_table"
+        self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table2}")
+        self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table3}")
+        self.client.command(f"""
+            CREATE TABLE {self.test_db}.{table2} (id UInt32)
+            ENGINE = MergeTree() ORDER BY id
+        """)
+        self.client.command(f"""
+            CREATE TABLE {self.test_db}.{table3} (id UInt32)
+            ENGINE = MergeTree() ORDER BY id
+        """)
+
+        try:
+            result = list_tables(self.test_db, not_like=["temp_%", "backup_%"])
+            self.assertIsInstance(result, dict)
+            self.assertIn("tables", result)
+            tables = result["tables"]
+            table_names = [t["name"] for t in tables]
+            self.assertIn(self.test_table, table_names)
+            self.assertNotIn(table2, table_names)
+            self.assertNotIn(table3, table_names)
+        finally:
+            self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table2}")
+            self.client.command(f"DROP TABLE IF EXISTS {self.test_db}.{table3}")
 
 
 if __name__ == "__main__":

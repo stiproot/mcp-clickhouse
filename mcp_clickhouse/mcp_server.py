@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, Union
 import concurrent.futures
 import atexit
 import os
@@ -121,12 +121,17 @@ def to_json(obj: Any) -> str:
     return obj
 
 
-def list_databases(like: Optional[str] = None, not_like: Optional[str] = None):
+def list_databases(
+    like: Optional[Union[str, List[str]]] = None,
+    not_like: Optional[Union[str, List[str]]] = None,
+):
     """List available ClickHouse databases
 
     Args:
-        like: Optional LIKE pattern to filter database names
-        not_like: Optional NOT LIKE pattern to exclude database names
+        like: Optional LIKE pattern(s) to filter database names. Can be a single string or list of strings.
+              Multiple patterns are combined with OR logic.
+        not_like: Optional NOT LIKE pattern(s) to exclude database names. Can be a single string or list of strings.
+                  Multiple patterns are combined with OR logic.
 
     Returns:
         JSON array of database names
@@ -136,10 +141,18 @@ def list_databases(like: Optional[str] = None, not_like: Optional[str] = None):
 
     # Use system.databases for filtering support
     query = "SELECT name FROM system.databases WHERE 1=1"
+
+    # Handle like patterns (single string or list)
     if like:
-        query += f" AND name LIKE {format_query_value(like)}"
+        like_patterns = [like] if isinstance(like, str) else like
+        like_conditions = [f"name LIKE {format_query_value(pattern)}" for pattern in like_patterns]
+        query += f" AND ({' OR '.join(like_conditions)})"
+
+    # Handle not_like patterns (single string or list)
     if not_like:
-        query += f" AND name NOT LIKE {format_query_value(not_like)}"
+        not_like_patterns = [not_like] if isinstance(not_like, str) else not_like
+        not_like_conditions = [f"name NOT LIKE {format_query_value(pattern)}" for pattern in not_like_patterns]
+        query += f" AND ({' AND '.join(not_like_conditions)})"
 
     result = client.query(query)
     databases = [row[0] for row in result.result_rows]
@@ -156,26 +169,35 @@ table_pagination_cache: TTLCache = TTLCache(maxsize=100, ttl=3600)  # 3600 secon
 def fetch_table_names_from_system(
     client,
     database: str,
-    like: Optional[str] = None,
-    not_like: Optional[str] = None,
+    like: Optional[Union[str, List[str]]] = None,
+    not_like: Optional[Union[str, List[str]]] = None,
 ) -> List[str]:
     """Get list of table names from system.tables.
 
     Args:
         client: ClickHouse client
         database: Database name
-        like: Optional pattern to filter table names (LIKE)
-        not_like: Optional pattern to filter out table names (NOT LIKE)
+        like: Optional pattern(s) to filter table names (LIKE). Can be a single string or list of strings.
+              Multiple patterns are combined with OR logic.
+        not_like: Optional pattern(s) to filter out table names (NOT LIKE). Can be a single string or list of strings.
+                  Multiple patterns are combined with OR logic.
 
     Returns:
         List of table names
     """
     query = f"SELECT name FROM system.tables WHERE database = {format_query_value(database)}"
-    if like:
-        query += f" AND name LIKE {format_query_value(like)}"
 
+    # Handle like patterns (single string or list)
+    if like:
+        like_patterns = [like] if isinstance(like, str) else like
+        like_conditions = [f"name LIKE {format_query_value(pattern)}" for pattern in like_patterns]
+        query += f" AND ({' OR '.join(like_conditions)})"
+
+    # Handle not_like patterns (single string or list)
     if not_like:
-        query += f" AND name NOT LIKE {format_query_value(not_like)}"
+        not_like_patterns = [not_like] if isinstance(not_like, str) else not_like
+        not_like_conditions = [f"name NOT LIKE {format_query_value(pattern)}" for pattern in not_like_patterns]
+        query += f" AND ({' AND '.join(not_like_conditions)})"
 
     result = client.query(query)
     table_names = [row[0] for row in result.result_rows]
@@ -243,8 +265,8 @@ def get_paginated_table_data(
 
 def create_page_token(
     database: str,
-    like: Optional[str],
-    not_like: Optional[str],
+    like: Optional[Union[str, List[str]]],
+    not_like: Optional[Union[str, List[str]]],
     table_names: List[str],
     end_idx: int,
     include_detailed_columns: bool,
@@ -253,8 +275,8 @@ def create_page_token(
 
     Args:
         database: Database name
-        like: LIKE pattern used to filter tables
-        not_like: NOT LIKE pattern used to filter tables
+        like: LIKE pattern(s) used to filter tables
+        not_like: NOT LIKE pattern(s) used to filter tables
         table_names: List of all table names
         end_idx: Index to start from for the next page
         include_detailed_columns: Whether to include detailed column metadata
@@ -276,8 +298,8 @@ def create_page_token(
 
 def list_tables(
     database: str,
-    like: Optional[str] = None,
-    not_like: Optional[str] = None,
+    like: Optional[Union[str, List[str]]] = None,
+    not_like: Optional[Union[str, List[str]]] = None,
     page_token: Optional[str] = None,
     page_size: int = 50,
     include_detailed_columns: bool = True,
@@ -287,8 +309,10 @@ def list_tables(
 
     Args:
         database: The database to list tables from
-        like: Optional LIKE pattern to filter table names
-        not_like: Optional NOT LIKE pattern to exclude table names
+        like: Optional LIKE pattern(s) to filter table names. Can be a single string or list of strings.
+              Multiple patterns are combined with OR logic.
+        not_like: Optional NOT LIKE pattern(s) to exclude table names. Can be a single string or list of strings.
+                  Multiple patterns are combined with OR logic.
         page_token: Token for pagination, obtained from a previous call
         page_size: Number of tables to return per page (default: 50)
         include_detailed_columns: Whether to include detailed column metadata (default: True).
