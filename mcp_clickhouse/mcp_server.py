@@ -121,17 +121,28 @@ def to_json(obj: Any) -> str:
     return obj
 
 
-def list_databases():
-    """List available ClickHouse databases"""
-    logger.info("Listing all databases")
-    client = create_clickhouse_client()
-    result = client.command("SHOW DATABASES")
+def list_databases(like: Optional[str] = None, not_like: Optional[str] = None):
+    """List available ClickHouse databases
 
-    # Convert newline-separated string to list and trim whitespace
-    if isinstance(result, str):
-        databases = [db.strip() for db in result.strip().split("\n")]
-    else:
-        databases = [result]
+    Args:
+        like: Optional LIKE pattern to filter database names
+        not_like: Optional NOT LIKE pattern to exclude database names
+
+    Returns:
+        JSON array of database names
+    """
+    logger.info("Listing databases with like=%s, not_like=%s", like, not_like)
+    client = create_clickhouse_client()
+
+    # Use system.databases for filtering support
+    query = "SELECT name FROM system.databases WHERE 1=1"
+    if like:
+        query += f" AND name LIKE {format_query_value(like)}"
+    if not_like:
+        query += f" AND name NOT LIKE {format_query_value(not_like)}"
+
+    result = client.query(query)
+    databases = [row[0] for row in result.result_rows]
 
     logger.info(f"Found {len(databases)} databases")
     return json.dumps(databases)

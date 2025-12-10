@@ -16,7 +16,9 @@ An MCP server for ClickHouse.
   * All ClickHouse queries are run with `readonly = 1` to ensure they are safe.
 
 * `list_databases`
-  * List all databases on your ClickHouse cluster.
+  * List databases on your ClickHouse cluster.
+  * Optional inputs:
+    * `like` / `not_like` (string): Apply `LIKE` or `NOT LIKE` filters to database names.
 
 * `list_tables`
   * List tables in a database with pagination.

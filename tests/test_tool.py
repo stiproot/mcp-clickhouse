@@ -48,6 +48,43 @@ class TestClickhouseTools(unittest.TestCase):
         databases = json.loads(result)
         self.assertIn(self.test_db, databases)
 
+    def test_list_databases_with_like(self):
+        """Test listing databases with a 'LIKE' filter."""
+        result = list_databases(like="test_tool%")
+        databases = json.loads(result)
+        self.assertIn(self.test_db, databases)
+        # Should only contain databases matching the pattern
+        for db in databases:
+            self.assertTrue(db.startswith("test_tool"))
+
+    def test_list_databases_with_not_like(self):
+        """Test listing databases with a 'NOT LIKE' filter."""
+        result = list_databases(not_like="test_tool%")
+        databases = json.loads(result)
+        # Should not contain our test database
+        self.assertNotIn(self.test_db, databases)
+
+    def test_list_databases_with_both_filters(self):
+        """Test listing databases with both 'LIKE' and 'NOT LIKE' filters."""
+        # First create an additional test database
+        test_db2 = "test_tool_db2"
+        self.client.command(f"CREATE DATABASE IF NOT EXISTS {test_db2}")
+
+        try:
+            # Filter to test_tool% but exclude test_tool_db2
+            result = list_databases(like="test_tool%", not_like="%db2")
+            databases = json.loads(result)
+            self.assertIn(self.test_db, databases)
+            self.assertNotIn(test_db2, databases)
+        finally:
+            self.client.command(f"DROP DATABASE IF EXISTS {test_db2}")
+
+    def test_list_databases_no_matches(self):
+        """Test listing databases with a filter that matches nothing."""
+        result = list_databases(like="nonexistent_database_pattern_%")
+        databases = json.loads(result)
+        self.assertEqual(len(databases), 0)
+
     def test_list_tables_without_like(self):
         """Test listing tables without a 'LIKE' filter."""
         result = list_tables(self.test_db)
