@@ -7,7 +7,6 @@ import os
 import uuid
 
 import clickhouse_connect
-import chdb.session as chs
 from clickhouse_connect.driver.binding import format_query_value
 from dotenv import load_dotenv
 from fastmcp import FastMCP
@@ -581,6 +580,19 @@ def _init_chdb_client():
         if not get_chdb_config().enabled:
             logger.info("chDB is disabled, skipping client initialization")
             return None
+
+        # Import chdb only when needed (it's an optional dependency)
+        try:
+            import chdb.session as chs
+        except ImportError:
+            logger.error(
+                "chDB is enabled but the chdb package is not installed. "
+                "Install it with: pip install mcp-clickhouse-like[chdb]"
+            )
+            raise ValueError(
+                "chDB is enabled but the chdb package is not installed. "
+                "Install it with: pip install mcp-clickhouse-like[chdb]"
+            )
 
         client_config = get_chdb_config().get_client_config()
         data_path = client_config["data_path"]

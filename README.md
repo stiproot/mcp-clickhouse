@@ -256,6 +256,13 @@ If you prefer to use the system Python installation instead of uv, you can insta
    python3 -m pip install --upgrade mcp-clickhouse-like
    ```
 
+   **Optional chDB Support:** If you want to use chDB features (embedded ClickHouse engine), install with the chdb extra:
+   ```bash
+   python3 -m pip install mcp-clickhouse-like[chdb]
+   ```
+
+   Note: chDB is not available on Windows. If you're on Windows, use the standard ClickHouse tools instead.
+
 2. Update your Claude Desktop configuration to use Python directly:
 
 ```json
